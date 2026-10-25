@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Plugin gratuito para SketchUp: configura a cena para render com IA em um clique, recorta e exporta o print na resolução certa.">
+<meta property="og:title" content="Print Pronto · plugin gratuito para SketchUp">
+<meta property="og:description" content="Configure a cena, recorte e exporte o print certo para a IA. Criado por @romulo_arq.">
+<meta property="og:type" content="website">
+<meta name="robots" content="noindex">
+<title>Print Pronto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: prancheta técnica — coluna única de leitura, marcas de recorte como linguagem visual, uma faixa escura para o e-book */
+:root {
+  --paper: #f3f3f0;
+  --sheet: #fbfbf9;
+  --ink: #191b1a;
+  --ink-2: #555a57;
+  --line: #d9dbd6;
+  --accent: #b5582f;
+  --accent-ink: #ffffff;
+  --band: #191b1a;
+  --band-ink: #f3f3f0;
+  --band-2: #a3a8a4;
+  --band-line: #343835;
+  --display: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --serif: "Instrument Serif", "Times New Roman", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --body: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #141615; --sheet: #1b1e1c; --ink: #ecedea; --ink-2: #a3a8a4; --line: #2e3230;
+    --accent: #d9774c; --accent-ink: #141615;
+    --band: #0c0d0d; --band-ink: #ecedea; --band-2: #9a9f9b; --band-line: #2a2e2c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #141615; --sheet: #1b1e1c; --ink: #ecedea; --ink-2: #a3a8a4; --line: #2e3230;
+  --accent: #d9774c; --accent-ink: #141615;
+  --band: #0c0d0d; --band-ink: #ecedea; --band-2: #9a9f9b; --band-line: #2a2e2c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+@media (prefers-color-scheme: dark) { html { color-scheme: dark; } }
+body { margin: 0; }
+img { max-width: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); letter-spacing: -0.025em; line-height: 1.05; text-wrap: balance; margin: 0; }
+em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+p { margin: 0; }
+a { color: inherit; }
+.label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+
+/* Topo */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 22px; }
+.brand { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; }
+.top a { font-family: var(--mono); font-size: 13px; text-decoration: none; color: var(--ink-2); }
+.top a:hover { color: var(--accent); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 56px; align-items: center; padding-block: 40px 80px; }
+.hero h1 { font-size: clamp(42px, 6.4vw, 76px); font-weight: 700; }
+.hero h1 em { font-size: 1.08em; }
+.lead { margin-top: 24px; font-size: 19px; color: var(--ink-2); max-width: 34em; }
+.actions { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 10px; border: 0; cursor: pointer; text-decoration: none; font: 600 16px/1 var(--display); padding: 17px 24px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); transition: transform .15s ease, filter .15s ease; }
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.btn.light { background: var(--band-ink); color: var(--band); }
+.meta { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); }
+.dl-status { margin-top: 14px; font-size: 14.5px; color: var(--ink-2); min-height: 1.4em; }
+.dl-status a { color: var(--accent); }
+
+/* Visual de recortes (viewfinder) */
+.frames { position: relative; aspect-ratio: 4 / 5; width: 100%; max-width: 420px; justify-self: center; }
+.frames .f { position: absolute; border: 1.5px solid var(--ink); }
+.frames .f span { position: absolute; top: -26px; left: -1.5px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.frames .f45 { inset: 0; border-color: var(--accent); border-width: 2px; background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.frames .f45 span { color: var(--accent); }
+.frames .f11 { left: 0; right: 0; top: 10%; bottom: 10%; border-style: dashed; }
+.frames .f11 span { top: auto; bottom: -24px; }
+.frames .f916 { top: 0; bottom: 0; left: 21.9%; right: 21.9%; border-style: dotted; }
+.frames .f916 span { left: auto; right: -1.5px; }
+.cross { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
+.cross::before, .cross::after { content: ""; position: absolute; background: var(--accent); }
+.cross::before { left: 50%; top: 0; bottom: 0; width: 1.5px; transform: translateX(-50%); }
+.cross::after { top: 50%; left: 0; right: 0; height: 1.5px; transform: translateY(-50%); }
+.corner { position: absolute; width: 18px; height: 18px; border-color: var(--ink); border-style: solid; border-width: 0; }
+.corner.tl { left: -12px; top: -12px; border-left-width: 1.5px; border-top-width: 1.5px; }
+.corner.tr { right: -12px; top: -12px; border-right-width: 1.5px; border-top-width: 1.5px; }
+.corner.bl { left: -12px; bottom: -12px; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.corner.br { right: -12px; bottom: -12px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+.dims { position: absolute; bottom: -40px; right: 0; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+
+/* Seções */
+section { padding-block: 88px; border-top: 1px solid var(--line); }
+.sec-head { display: grid; grid-template-columns: 1fr 1.6fr; gap: 40px; align-items: end; margin-bottom: 48px; }
+.sec-head h2 { font-size: clamp(32px, 4.4vw, 50px); font-weight: 700; }
+.sec-head p { color: var(--ink-2); max-width: 36em; }
+
+/* Funções */
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1.5px solid var(--ink); }
+.feat { padding: 26px 28px 30px 0; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.feat + .feat { padding-left: 28px; border-left: 1px solid var(--line); }
+.feat .n { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.feat h3 { font-size: 26px; font-weight: 700; }
+.feat p { color: var(--ink-2); font-size: 16px; }
+.feat ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 15px; }
+.feat li { padding-left: 18px; position: relative; }
+.feat li::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 9px; height: 1.5px; background: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.chip { font-family: var(--mono); font-size: 12px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--sheet); }
+
+/* Painel */
+.panel-show { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 64px; align-items: center; }
+.shot { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 18px; max-width: 360px; justify-self: center; width: 100%; }
+.shot img { display: block; width: 100%; height: auto; border-radius: 6px; max-height: 620px; object-fit: cover; object-position: top; }
+.shot figcaption { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-top: 12px; }
+.panel-text h2 { font-size: clamp(30px, 4vw, 46px); font-weight: 700; }
+.panel-text p { margin-top: 18px; color: var(--ink-2); max-width: 32em; }
+.notes { margin-top: 28px; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.note { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding-block: 14px; border-bottom: 1px solid var(--line); font-size: 15.5px; }
+.note b { font-weight: 600; }
+.note span { color: var(--ink-2); }
+
+/* Instalação */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; counter-reset: s; }
+.step { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.step .n { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.step h3 { font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
+.step p { font-size: 15px; color: var(--ink-2); }
+.path { font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: var(--paper); border-radius: 4px; padding: 2px 6px; overflow-wrap: anywhere; }
+
+/* E-book */
+.ebook { background: var(--band); color: var(--band-ink); border-top: 0; }
+.ebook .label { color: var(--band-2); }
+.ebook-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 64px; align-items: start; }
+.ebook h2 { font-size: clamp(36px, 5.2vw, 62px); font-weight: 700; margin-top: 18px; }
+.ebook .lead { color: var(--band-2); }
+.flow { margin-top: 36px; display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; gap: 12px; font-family: var(--mono); font-size: 13px; color: var(--band-2); }
+.flow b { color: var(--band-ink); font-weight: 500; border: 1px solid var(--band-line); border-radius: 4px; padding: 7px 10px; white-space: nowrap; }
+.flow b.hot { border-color: var(--accent); color: var(--accent); }
+.flow i { height: 1px; background: var(--band-line); }
+.inside { display: grid; gap: 0; border-top: 1px solid var(--band-line); }
+.inside li { list-style: none; padding: 18px 0; border-bottom: 1px solid var(--band-line); display: grid; gap: 4px; }
+.inside ul { margin: 0; padding: 0; }
+.inside strong { font-weight: 600; font-size: 17px; }
+.inside span { color: var(--band-2); font-size: 15px; }
+.bonus { margin-top: 28px; border: 1px solid var(--accent); border-radius: 10px; padding: 22px; display: grid; gap: 12px; }
+.bonus .label { color: var(--accent); }
+.bonus p { color: var(--band-2); font-size: 15.5px; }
+.prompts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.prompts span { font-family: var(--mono); font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--band-line); border-radius: 4px; color: var(--band-ink); }
+.buy { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 18px 24px; }
+.price { font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: -0.02em; }
+.price small { display: block; font-family: var(--mono); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; color: var(--band-2); text-transform: uppercase; }
+.honest { margin-top: 22px; font-size: 14.5px; color: var(--band-2); max-width: 36em; }
+
+/* Rodapé */
+footer { padding-block: 56px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+footer p { color: var(--ink-2); font-size: 15px; }
+footer .big { font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+@media (max-width: 880px) {
+  .hero, .panel-show, .ebook-grid, .sec-head { grid-template-columns: 1fr; gap: 40px; }
+  .hero { padding-block: 24px 72px; }
+  .frames { max-width: 300px; margin-top: 12px; }
+  .feats { grid-template-columns: 1fr; }
+  .feat, .feat + .feat { padding: 24px 0; border-left: 0; }
+  .feat + .feat { border-top: 1px solid var(--line); }
+  .steps { grid-template-columns: 1fr 1fr; }
+  section { padding-block: 64px; }
+  .sec-head { margin-bottom: 32px; }
+}
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .steps { grid-template-columns: 1fr; }
+  .note { grid-template-columns: 1fr; gap: 2px; }
+  .flow { grid-template-columns: 1fr; justify-items: start; }
+  .flow i { display: none; }
+  .prompts { grid-template-columns: 1fr; }
+  .btn { width: 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Print Pronto</div>
+    <a href="https://www.instagram.com/romulo_arq/" target="_blank" rel="noopener">@romulo_arq</a>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="label">Plugin gratuito para SketchUp</div>
+      <h1 style="margin-top:18px">O print certo para a <em>IA</em>, sem abrir cinco janelas.</h1>
+      <p class="lead">Um clique deixa a cena com o estilo e a iluminação que eu uso no escritório para gerar renders com IA. Depois, você escolhe o recorte e exporta na resolução certa.</p>
+      <div class="actions">
+        <a class="btn" id="baixar" href="PrintPronto_v1.4.0.rbz" download>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2v10m0 0l-4-4m4 4l4-4M3 15h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Baixar grátis
+        </a>
+        <span class="meta">v1.4 · SketchUp 2017 ou mais recente</span>
+      </div>
+      <p class="dl-status">Depois de baixar, siga os <a href="#instalar">4 passos de instalação</a>.</p>
+    </div>
+
+    <div class="frames" aria-hidden="true">
+      <div class="f f916"><span>9:16</span></div>
+      <div class="f f11"><span>1:1</span></div>
+      <div class="f f45"><span>4:5 · feed</span></div>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="cross"></div>
+      <div class="dims">1080 × 1350 px</div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Três funções, <em>na ordem</em> em que você usa.</h2>
+      <p>O plugin não mexe na sua câmera nem tira você da cena em que está. Ele só ajusta o que costuma ser esquecido antes de mandar o print para a IA.</p>
+    </div>
+    <div class="feats">
+      <div class="feat">
+        <div class="n">01</div>
+        <h3>Configurar cena</h3>
+        <p>Aplica, com um clique, o estilo que funciona bem como base para render.</p>
+        <ul>
+          <li>Arestas com perfis em 1, sem tracejados</li>
+          <li>Faces com textura e fundo branco</li>
+          <li>Oclusão ambiental ligada (SketchUp 2024+)</li>
+          <li>Sol para sombrear, claro e escuro em 70</li>
+          <li>Opção de aplicar em todas as cenas</li>
+        </ul>
+      </div>
+      <div class="feat">
+        <div class="n">02</div>
+        <h3>Recortar</h3>
+        <p>Mostra na tela a moldura do formato escolhido, para você enquadrar antes de exportar.</p>
+        <div class="chips">
+          <span class="chip">1:1</span><span class="chip">4:5</span><span class="chip">9:16</span><span class="chip">16:9</span><span class="chip">3:2</span><span class="chip">A4</span><span class="chip">Livre</span>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="n">03</div>
+        <h3>Exportar</h3>
+        <p>Salva o print em PNG ou JPG no tamanho certo, mostrando os pixels antes de salvar.</p>
+        <div class="chips">
+          <span class="chip">1080 Instagram</span><span class="chip">Full HD</span><span class="chip">2560</span><span class="chip">4K</span><span class="chip">4615 px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap panel-show">
+    <figure class="shot" style="margin:0">
+      <img src="painel.jpg" alt="Painel do Print Pronto com as seções Configurar cena, Recorte e Exportar" width="760" height="1980" loading="lazy">
+      <figcaption>Painel do plugin dentro do SketchUp</figcaption>
+    </figure>
+    <div class="panel-text">
+      <div class="label">Como fica</div>
+      <h2 style="margin-top:16px">Tudo num painel só, <em>em português</em>.</h2>
+      <p>Ele aparece como uma barra com dois botões e no menu Extensões. As escolhas ficam salvas para o próximo projeto.</p>
+      <div class="notes">
+        <div class="note"><b>Preço</b><span>Gratuito, sem cadastro dentro do plugin.</span></div>
+        <div class="note"><b>Compatível</b><span>SketchUp 2017 ou mais recente. A oclusão ambiental só aparece a partir do 2024.</span></div>
+        <div class="note"><b>Seu modelo</b><span>Tudo o que o plugin faz pode ser desfeito com Ctrl+Z.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="instalar">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Instale em <em>dois minutos</em>.</h2>
+      <p>O arquivo vem no formato .rbz, o pacote de extensão do próprio SketchUp. Não precisa descompactar.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n">Passo 1</div><h3>Baixe o arquivo</h3><p>Use o botão desta página e salve o <span class="path">PrintPronto_v1.4.0.rbz</span>.</p></div>
+      <div class="step"><div class="n">Passo 2</div><h3>Abra o gerenciador</h3><p>No SketchUp, vá em <span class="path">Extensões › Gerenciador de extensões</span>.</p></div>
+      <div class="step"><div class="n">Passo 3</div><h3>Instale</h3><p>Clique em <span class="path">Instalar extensão</span>, escolha o .rbz e confirme.</p></div>
+      <div class="step"><div class="n">Passo 4</div><h3>Reinicie</h3><p>Feche e abra o SketchUp. A barra do Print Pronto aparece em seguida.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="ebook">
+  <div class="wrap ebook-grid">
+    <div>
+      <div class="label">Próximo passo</div>
+      <h2>O print está pronto. Agora falta o <em>prompt</em>.</h2>
+      <p class="lead">Um bom print é metade do resultado. A outra metade é saber o que pedir para a IA. No e-book <b style="color:var(--band-ink);font-weight:600">Do Print ao Render com IA</b> eu mostro a estrutura de prompt que uso para transformar prints simples em imagens de apresentação.</p>
+      <div class="flow" aria-hidden="true">
+        <b>print</b><i></i><b class="hot">prompt</b><i></i><b>render</b>
+      </div>
+      <div class="buy">
+        <a class="btn light" href="https://romulosouza.atoms.world" target="_blank" rel="noopener">Conhecer o e-book</a>
+        <div class="price"><small>Valor</small>R$ 27,90</div>
+      </div>
+      <p class="honest">A IA ajuda a mostrar o projeto. As decisões continuam sendo do arquiteto.</p>
+    </div>
+    <div>
+      <ul class="inside">
+        <li><strong>Estrutura de prompt reutilizável</strong><span>Com campos para você trocar a cada projeto.</span></li>
+        <li><strong>Antes de mandar seu projeto para a IA</strong><span>Checklist do que conferir no 3D.</span></li>
+        <li><strong>Se aconteceu isso, tente isso</strong><span>Diagnóstico dos erros mais comuns no resultado.</span></li>
+        <li><strong>Comparações lado a lado</strong><span>Print e render, prompt genérico e prompt estruturado, cena vazia e humanizada.</span></li>
+      </ul>
+      <div class="bonus">
+        <div class="label">Bônus</div>
+        <p>Os prompts que eu uso no meu escritório, cada um com a imagem que ele gerou.</p>
+        <div class="prompts">
+          <span>Render interno</span><span>Render externo</span><span>Close-up</span><span>Render humanizado</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer>
+    <div>
+      <p class="big">Rômulo Souza</p>
+      <p>Arquiteto. IA aplicada à rotina do escritório.</p>
+    </div>
+    <p>Dúvidas sobre o plugin? Me chama no <a href="https://www.instagram.com/romulo_arq/" target="_blank" rel="noopener">@romulo_arq</a></p>
+  </footer>
+</div>
+</body>
+</html>
